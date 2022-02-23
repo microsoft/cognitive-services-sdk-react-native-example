@@ -24,6 +24,7 @@
  import {
    Colors,
  } from 'react-native/Libraries/NewAppScreen';
+ import 'react-native-get-random-values';
  import { AudioConfig, CancellationDetails, CancellationReason, NoMatchDetails, NoMatchReason, ResultReason, SpeechConfig, SpeechRecognizer } from 'microsoft-cognitiveservices-speech-sdk';
  import DocumentPicker from 'react-native-document-picker';
  import RNFS from 'react-native-fs';
