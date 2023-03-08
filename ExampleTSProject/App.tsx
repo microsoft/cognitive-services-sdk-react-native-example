@@ -2,33 +2,26 @@
  * Sample React Native App
  * https://github.com/facebook/react-native
  *
- * Generated with the TypeScript template
- * https://github.com/react-native-community/react-native-template-typescript
- *
  * @format
  */
-
- import React, { Component } from 'react';
- import {
-   Button,
-   SafeAreaView,
-   ScrollView,
-   StatusBar,
-   StyleSheet,
-   Text,
-   TextInput,
-   useColorScheme,
-   View,
- } from 'react-native';
- import { Picker } from '@react-native-picker/picker';
- import {
-   Colors,
- } from 'react-native/Libraries/NewAppScreen';
- import 'react-native-get-random-values';
- import { AudioConfig, CancellationDetails, CancellationReason, NoMatchDetails, NoMatchReason, ResultReason, SpeechConfig, SpeechRecognizer } from 'microsoft-cognitiveservices-speech-sdk';
- import DocumentPicker from 'react-native-document-picker';
- import RNFS from 'react-native-fs';
- import getPath from '@flyerhq/react-native-android-uri-path'
+import React, { Component } from 'react';
+import {
+  Button,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
+} from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import 'react-native-get-random-values';
+import 'node-libs-react-native/globals';
+import { AudioConfig, AudioInputStream, CancellationDetails, CancellationReason, NoMatchDetails, NoMatchReason, ResultReason, SpeechConfig, SpeechRecognizer } from 'microsoft-cognitiveservices-speech-sdk';
+import DocumentPicker from 'react-native-document-picker';
+import RNFS from 'react-native-fs';
 
 const Buffer = require('buffer').Buffer;
 const regionOptions = [
@@ -41,6 +34,7 @@ const regionOptions = [
   {val:"northeurope", name:"North Europe"},
   {val:"westeurope", name:"West Europe"}
 ];
+
 
 const optList = (options: {val: string, name: string}[]) => {
     return( options.map( (opt) => { 
@@ -171,18 +165,30 @@ const RecognitionButtons: React.FC<RecognitionBtnProps> = ({onStart, onStop, rec
         </View>
       </View>
     );
-}
+};
 
 const getBufferFromUri = async (uri: string): Promise<Buffer> => {
-  const path = getPath(uri);
-  const utf8string = await RNFS.readFile(path, 'base64');
+  if (uri.startsWith('content://')) {
+    const urlComponents = uri.split('/')
+    const fileNameAndExtension = urlComponents[urlComponents.length - 1]
+    const destPath = `${RNFS.TemporaryDirectoryPath}/${fileNameAndExtension}`
+    await RNFS.copyFile(uri, destPath)
+    const path = `file://${destPath}`;
+    const utf8string = await RNFS.readFile(path, 'base64');
 
-  return Buffer.from(utf8string, 'base64');
-}
+    return Buffer.from(utf8string, 'base64');
+  }
+  return Buffer.from("");
+};
 
 const getRecognizer = async (key: string, region: string, language: string, uri: string, filename: string) => {
   const fileBuf = await getBufferFromUri(uri);
   const audioConfig = AudioConfig.fromWavFileInput(fileBuf, filename);
+  //const p = AudioInputStream.createPushStream();
+  //const fileBuffer = new Uint8Array(1024 * 1024);
+  //const audioConfig = AudioConfig.fromStreamInput(p);
+  //p.write(fileBuffer.buffer);
+  //p.close();
 
   const speechConfig = SpeechConfig.fromSubscription(key, region);
 
@@ -203,7 +209,6 @@ const setRecognizerCallbacks = (reco: SpeechRecognizer, componentRef: Component)
   // 2. No additional audio is available.
   //    Caused by the input stream being closed or reaching the end of an audio file.
   reco.canceled = (s, e) => {
-      //window.console.log(e);
 
       let eventText = `(cancel) Reason: ${CancellationReason[e.reason]}`;
       if (e.reason === CancellationReason.Error) {
@@ -216,8 +221,6 @@ const setRecognizerCallbacks = (reco: SpeechRecognizer, componentRef: Component)
   // This is the final event that a phrase has been recognized.
   // For continuous recognition, you will get one recognized event for each phrase recognized.
   reco.recognized = (s, e) => {
-      //window.console.log(e);
-
       // Indicates that recognizable speech was not detected, and that recognition is done.
       let eventText = `(recognized)  Reason: ${ResultReason[e.result.reason]}`;
       if (e.result.reason === ResultReason.NoMatch) {
@@ -297,7 +300,7 @@ type SpeechState = {
   filename: string,
   uri: string,
   recognizing: boolean,
-}
+};
 
 class SpeechTable extends Component<{}, SpeechState> {
   private reco: SpeechRecognizer | null;
@@ -312,11 +315,11 @@ class SpeechTable extends Component<{}, SpeechState> {
   updateRegion = (value: string) => { 
     console.log(`updateRegion: ${value}`);
     this.setState({ region: value });
-  }
+  };
   updateFile = async () => {
     const type = DocumentPicker.types.audio;
     const res = await DocumentPicker.pick({ type });
-    this.setState({ filename: res.name, uri: res.uri });
+    this.setState({ filename: res[0].name as string, uri: res[0].uri });
   };
 
   startRecognition = async () => {
@@ -344,7 +347,7 @@ class SpeechTable extends Component<{}, SpeechState> {
     }
   };
 
-  render () {
+  render() {
     return (
       //Table, tbody
       <View style={styles.tableDefaultStyle}>
@@ -368,47 +371,13 @@ class SpeechTable extends Component<{}, SpeechState> {
   }
 }
 
- const Section: React.FC<{
-   title: string;
- }> = ({children, title}) => {
-   const isDarkMode = useColorScheme() === 'dark';
-   return (
-     <View style={styles.sectionContainer}>
-       <Text
-         style={[
-           styles.sectionTitle,
-           {
-             color: isDarkMode ? Colors.white : Colors.black,
-           },
-         ]}>
-         {title}
-       </Text>
-       <Text
-         style={[
-           styles.sectionDescription,
-           {
-             color: isDarkMode ? Colors.light : Colors.dark,
-           },
-         ]}>
-         {children}
-       </Text>
-     </View>
-   );
- };
-
- const App = () => {
-   const isDarkMode = useColorScheme() === 'dark';
-
-   const backgroundStyle = {
-     backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
-   };
-
-   return (
+const App = () => {
+  return (
     <SpeechTable />
-   );
- };
+  );
+};
 
- const styles = StyleSheet.create({
+const styles = StyleSheet.create({
    sectionContainer: {
      marginTop: 2,
      paddingHorizontal: 24,
@@ -460,6 +429,6 @@ class SpeechTable extends Component<{}, SpeechState> {
      color: '#333',
      width: '65%',
    },
- });
+});
 
- export default App;
+export default App;
