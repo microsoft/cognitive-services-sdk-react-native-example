@@ -1,8 +1,12 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+
+This sample app allows continuous voice recognition using microsoft-cognitiveservices-speech-sdk and react-native-live-audio-stream.
+
+How to run this?
+1. Delete/Move the App.tsx file from the project to another folder
+2. Rename this file to App.js
+3. Run
+
  */
 import React, { Component } from 'react';
 import {
