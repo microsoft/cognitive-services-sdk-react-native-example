@@ -1,8 +1,11 @@
 /**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
+
+This sample app allows continuous voice recognition using microsoft-cognitiveservices-speech-sdk and react-native-live-audio-stream.
+
+How to run this?
+1. Change values needed at line 26 "//CHANGE THESE VALUES"
+2. Check the header in index.js for futher instructions
+
  */
 import React, { Component } from 'react';
 import {
@@ -20,14 +23,24 @@ import AudioRecord from 'react-native-live-audio-stream';
 LogBox.ignoreLogs(['new NativeEventEmitter']); // Ignore log notification by message
 
 export default App = () => {
+  //CHANGE THESE VALUES
+  const key = "YOUR_SUBSCRIPTION_KEY";
+  const region = "YOUR_SUBSCRIPTION_REGION";
+  const language = "en-US";
+
+
+
+  //Settings for the audio stream
+  //tuned to documentation at https://learn.microsoft.com/en-us/azure/cognitive-services/speech-service/how-to-use-audio-input-streams
+  //Do not change these values unless you're an expert
   const channels = 1;
   const bitsPerChannel = 16;
   const sampleRate = 16000;
-  const key = "YOUR_SUBSCRIPTION_KEY";
-  const region = "YOUR_SUBSCRIPTION_REGION";
 
   let initializedCorrectly = false;
   let recognizer;
+
+  //prompt for permissions if not granted
   const checkPermissions = async () => {
     if (Platform.OS === 'android') {
       try {
@@ -59,10 +72,12 @@ export default App = () => {
     }
   };
 
+  //sets up speechrecognizer and audio stream
   const initializeAudio = async () => {
-    await checkPermissions(); // check app permissions 
+    await checkPermissions();
     if(!initializedCorrectly) {
 
+      //creates a push stream system which allows new data to be pushed to the recognizer
       const pushStream = AudioInputStream.createPushStream();
       const options = {
         sampleRate,
@@ -72,6 +87,7 @@ export default App = () => {
       };
 
       AudioRecord.init(options);
+      //everytime data is recieved from the mic, push it to the pushStream
       AudioRecord.on('data', (data) => {
         const pcmData = Buffer.from(data, 'base64');
         pushStream.write(pcmData);
@@ -80,8 +96,8 @@ export default App = () => {
       AudioRecord.start();
 
       const speechConfig = SpeechConfig.fromSubscription(key, region);
-      speechConfig.speechRecognitionLanguage = "en-US";
-      const audioConfig = AudioConfig.fromStreamInput(pushStream);
+      speechConfig.speechRecognitionLanguage = language;
+      const audioConfig = AudioConfig.fromStreamInput(pushStream); //the recognizer uses the stream to get audio data
       recognizer = new SpeechRecognizer(speechConfig, audioConfig);
 
       recognizer.sessionStarted = (s, e) => {
@@ -94,11 +110,13 @@ export default App = () => {
       };
 
       recognizer.recognizing = (s, e) => {
+        //The recognizer will return partial results. This is not called when recognition is stopped and sentences are formed but when recognizer picks up scraps of words on-the-fly.
         console.log(`RECOGNIZING: Text=${e.result.text}`);
         console.log(e.result.text);
         console.log(e.sessionId);
       };
       recognizer.recognized = (s, e) => {
+        //The final result of the recognition with punctuation
         console.log(`RECOGNIZED: Text=${e.result.text}`);
         console.log(e.result);
       };
@@ -113,6 +131,7 @@ export default App = () => {
     }
   };
 
+  //stops the audio stream and recognizer
   const stopAudio = async () => {
     AudioRecord.stop(); 
     if(!!recognizer) {
